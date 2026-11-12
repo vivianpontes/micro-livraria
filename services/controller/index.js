@@ -2,6 +2,8 @@ const express = require('express');
 const shipping = require('./shipping');
 const inventory = require('./inventory');
 const cors = require('cors');
+const coupons = require('./coupons');
+const grpc = require('@grpc/grpc-js');
 
 const app = express();
 app.use(cors());
@@ -38,6 +40,57 @@ app.get('/shipping/:cep', (req, res, next) => {
                     value: data.value,
                 });
             }
+        }
+    );
+});
+
+app.get('/coupons/:code', (req, res) => {
+    const rawSubtotal = req.query.subtotal_cents;
+
+    if (
+        typeof rawSubtotal !== 'string' ||
+        !/^\d+$/.test(rawSubtotal)
+    ) {
+        return res.status(400).json({
+            error: 'Informe subtotal_cents como inteiro positivo.',
+        });
+    }
+
+    const subtotal = Number(rawSubtotal);
+
+    if (
+        !Number.isInteger(subtotal) ||
+        subtotal <= 0 ||
+        subtotal > 2147483647
+    ) {
+        return res.status(400).json({
+            error: 'Subtotal fora do intervalo permitido.',
+        });
+    }
+
+    coupons.ApplyCoupon(
+        {
+            code: req.params.code,
+            subtotal_cents: subtotal,
+        },
+        { deadline: new Date(Date.now() + 5000) },
+        (error, data) => {
+            if (error) {
+                const statusByCode = {
+                    [grpc.status.INVALID_ARGUMENT]: 400,
+                    [grpc.status.NOT_FOUND]: 404,
+                    [grpc.status.UNAVAILABLE]: 503,
+                    [grpc.status.DEADLINE_EXCEEDED]: 504,
+                };
+
+                return res.status(
+                    statusByCode[error.code] || 500
+                ).json({
+                    error: error.details || 'Erro ao consultar cupom.',
+                });
+            }
+
+            res.json(data);
         }
     );
 });

@@ -1,0 +1,36 @@
+services:
+  frontend:
+    build: .
+    command:
+      - ./node_modules/.bin/serve
+      - -l
+      - tcp://0.0.0.0:5000
+      - services/frontend
+    ports:
+      - "5000:5000"
+
+  controller:
+    build: .
+    command: ["node", "services/controller/index.js"]
+    ports:
+      - "3000:3000"
+    environment:
+      INVENTORY_ADDRESS: inventory:3002
+      SHIPPING_ADDRESS: shipping:3001
+      COUPONS_ADDRESS: coupons:3003
+    depends_on:
+      - inventory
+      - shipping
+      - coupons
+
+  inventory:
+    build: .
+    command: ["node", "services/inventory/index.js"]
+
+  shipping:
+    build: .
+    command: ["node", "services/shipping/index.js"]
+
+  coupons:
+    build: .
+    command: ["node", "services/coupons/index.js"]

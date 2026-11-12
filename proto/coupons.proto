@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+service CouponsService {
+    rpc ApplyCoupon(CouponRequest) returns (CouponResponse) {}
+}
+
+message CouponRequest {
+    string code = 1;
+    int32 subtotal_cents = 2;
+}
+
+message CouponResponse {
+    string code = 1;
+    int32 percentage = 2;
+    int32 discount_cents = 3;
+    int32 total_cents = 4;
+}
